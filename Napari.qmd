@@ -1,0 +1,31 @@
+---
+title: "Visualize and align with Napari"
+format: html
+editor: visual
+jupyter: python3
+---
+
+## Create SpatialData objects
+
+This code is inspired by [this tutorial](https://spatialdata.scverse.org/en/latest/tutorials/notebooks/notebooks/examples/alignment_using_landmarks.html)
+
+```{python}
+import numpy as np
+import spatialdata as sd
+
+from napari_spatialdata import Interactive
+import spatialdata_io as sio
+import spatialdata_plot
+
+sham = sio.visium(path="data/Sample_S54407_Sham1_3_5/outs/", dataset_id="Sham")
+sham
+
+sham.pl.render_images().pl.render_shapes().pl.show("downscaled_hires")
+sham.pl.render_images().pl.render_shapes().pl.show("global")
+```
+
+## Visualize with Napari
+
+```{python}
+Interactive(sham)
+```

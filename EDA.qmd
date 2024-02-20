@@ -1,0 +1,221 @@
+---
+title: "Visium EDA"
+format: html
+editor: visual
+---
+
+## Read in unfiltered samples
+
+```{r}
+library(SpatialFeatureExperiment)
+library(SpatialExperiment)
+
+base_dirs <- "~/Google Drive/My Drive/research/Cachectic_Visium/"
+sample_dirs <- c("Sample_S54407_Sham1_3_5",
+                 "Sample_S54410_C26Ctrl_7_9_11",
+                 "Sample_S54409_C26Sh_16_18_20",
+                 "Sample_S54408_C26Sh_17_19_21"
+                 )
+
+spe <- read10xVisium(paste0(base_dirs, sample_dirs, "/outs"),
+                     sample_id = c("Sham", "C26Ctrl", "C26T16", "C26T17"),
+                     type="sparse",
+                     images = "lowres",
+                     data="raw")
+
+spe
+colData(spe)
+table(spe$in_tissue, spe$sample_id)
+```
+
+First look at the samples
+
+```{r}
+library(scater)
+library(ggspavis)
+
+spe <- addPerCellQCMetrics(spe)
+
+plotVisium(spe, fill="sum", trans="log10")
+```
+
+## Filtering and sample splitting
+
+We can filter the spots, mostly using 10X algorithm, but removing the top-right corner of C26Ctrl.
+
+```{r}
+library(ggplot2)
+library(dplyr)
+theme_set(theme_bw())
+
+plotSpots(spe[, spe$sample_id=="C26Ctrl"])
+
+as.data.frame(colData(spe)) |>
+    dplyr::filter(in_tissue & sample_id=="C26Ctrl") |>
+    ggplot(aes(-array_row, -array_col)) +
+    geom_point()
+```
+
+We need to split the samples, I would hope that a simple clustering of the coordinates will do the job.
+
+### C26 control
+
+```{r}
+library(dbscan)
+
+C26Ctrl <- spe[, spe$in_tissue & spe$sample_id=="C26Ctrl"]
+coords <- spatialCoords(C26Ctrl)
+
+cl <- dbscan(coords, eps = 300, minPts = 10)
+table(cl$cluster)
+
+as.data.frame(colData(C26Ctrl)) |>
+    ggplot(aes(-array_row, -array_col, color=as.factor(cl$cluster))) +
+    geom_point()
+
+C26Ctrl_1 <- C26Ctrl[, cl$cluster==1]
+C26Ctrl_2 <- C26Ctrl[, cl$cluster==2]
+
+plotVisium(C26Ctrl_1, fill="sum", trans="log10")
+plotVisium(C26Ctrl_2, fill="sum", trans="log10")
+```
+
+### Sham
+
+```{r}
+Sham <- spe[, spe$in_tissue & spe$sample_id=="Sham"]
+coords <- spatialCoords(Sham)
+
+cl <- dbscan(coords, eps = 300, minPts = 10)
+table(cl$cluster)
+
+as.data.frame(colData(Sham)) |>
+    ggplot(aes(-array_row, -array_col, color=as.factor(cl$cluster))) +
+    geom_point()
+
+Sham_1 <- Sham[, cl$cluster==1]
+Sham_2 <- Sham[, cl$cluster==2]
+Sham_3 <- Sham[, cl$cluster==3]
+
+plotVisium(Sham_1, fill="sum", trans="log10")
+plotVisium(Sham_2, fill="sum", trans="log10")
+plotVisium(Sham_3, fill="sum", trans="log10")
+```
+
+### C26T16
+
+```{r}
+C26T16 <- spe[, spe$in_tissue & spe$sample_id=="C26T16"]
+coords <- spatialCoords(C26T16)
+
+cl <- dbscan(coords, eps = 300, minPts = 10)
+table(cl$cluster)
+
+as.data.frame(colData(C26T16)) |>
+    ggplot(aes(-array_row, -array_col, color=as.factor(cl$cluster))) +
+    geom_point()
+
+C26T16_1 <- C26T16[, cl$cluster==1]
+C26T16_2 <- C26T16[, cl$cluster==2]
+C26T16_3 <- C26T16[, cl$cluster==3]
+
+plotVisium(C26T16_1, fill="sum", trans="log10")
+plotVisium(C26T16_2, fill="sum", trans="log10")
+plotVisium(C26T16_3, fill="sum", trans="log10")
+```
+
+### C26T17
+
+```{r}
+C26T17 <- spe[, spe$in_tissue & spe$sample_id=="C26T17"]
+coords <- spatialCoords(C26T17)
+
+cl <- dbscan(coords, eps = 300, minPts = 10)
+table(cl$cluster)
+
+as.data.frame(colData(C26T17)) |>
+    ggplot(aes(-array_row, -array_col, color=as.factor(cl$cluster))) +
+    geom_point()
+
+C26T17_1 <- C26T17[, cl$cluster==1]
+C26T17_2 <- C26T17[, cl$cluster==2]
+C26T17_3 <- C26T17[, cl$cluster==3]
+
+plotVisium(C26T17_1, fill="sum", trans="log10")
+plotVisium(C26T17_2, fill="sum", trans="log10")
+plotVisium(C26T17_3, fill="sum", trans="log10")
+```
+
+### Add tissue ID to full object
+
+```{r}
+spe$tissue_id <- rep(NA_character_, ncol(spe))
+
+colData(spe)[spe$sample_id=="Sham",][colnames(Sham_1),"tissue_id"] <- "Sham_1"
+colData(spe)[spe$sample_id=="Sham",][colnames(Sham_2),"tissue_id"] <- "Sham_2"
+colData(spe)[spe$sample_id=="Sham",][colnames(Sham_3),"tissue_id"] <- "Sham_3"
+
+colData(spe)[spe$sample_id=="C26T16",][colnames(C26T16_1),"tissue_id"] <- "C26T16_1"
+colData(spe)[spe$sample_id=="C26T16",][colnames(C26T16_2),"tissue_id"] <- "C26T16_2"
+colData(spe)[spe$sample_id=="C26T16",][colnames(C26T16_3),"tissue_id"] <- "C26T16_3"
+
+colData(spe)[spe$sample_id=="C26T17",][colnames(C26T17_1),"tissue_id"] <- "C26T17_1"
+colData(spe)[spe$sample_id=="C26T17",][colnames(C26T17_2),"tissue_id"] <- "C26T17_2"
+colData(spe)[spe$sample_id=="C26T17",][colnames(C26T17_3),"tissue_id"] <- "C26T17_3"
+
+colData(spe)[spe$sample_id=="C26Ctrl",][colnames(C26Ctrl_1),"tissue_id"] <- "C26Ctrl_1"
+colData(spe)[spe$sample_id=="C26Ctrl",][colnames(C26Ctrl_2),"tissue_id"] <- "C26Ctrl_2"
+
+spe$tissue_id <- as.factor(spe$tissue_id)
+
+plotVisium(spe, fill="tissue_id") +
+    scale_fill_brewer(type = "qual", palette = "Set3")
+
+plotSpots(spe, annotate="tissue_id") +
+    scale_color_brewer(type = "qual", palette = "Set3")
+
+saveRDS(spe, file="spe_annotated.rds")
+```
+
+## Exploratory Data Analysis
+
+Plot total counts and three interesting genes.
+
+```{r}
+library(scater)
+spe <- logNormCounts(spe)
+
+colData(spe)$Trim63 <- logcounts(spe)[rowData(spe)$symbol == "Trim63",]
+colData(spe)$Foxo1 <- logcounts(spe)[rowData(spe)$symbol == "Foxo1",]
+colData(spe)$Foxo3 <- logcounts(spe)[rowData(spe)$symbol == "Foxo3",]
+
+plotVisium(spe[,!is.na(spe$tissue_id)], fill="sum", trans="log10")
+plotSpots(spe[,!is.na(spe$tissue_id)], annotate="sum")
+
+plotVisium(spe[,!is.na(spe$tissue_id)], fill="Trim63")
+plotSpots(spe[,!is.na(spe$tissue_id)], annotate="Trim63")
+
+plotVisium(spe[,!is.na(spe$tissue_id)], fill="Foxo1")
+plotSpots(spe[,!is.na(spe$tissue_id)], annotate="Foxo1")
+
+plotVisium(spe[,!is.na(spe$tissue_id)], fill="Foxo3")
+plotSpots(spe[,!is.na(spe$tissue_id)], annotate="Foxo3")
+```
+
+### PCA of pseudobulk
+
+```{r}
+# create pseudobulk
+library(scuttle)
+pb <- aggregateAcrossCells(spe, ids=spe$tissue_id)
+pb <- computeLibraryFactors(pb)
+pb <- logNormCounts(pb)
+pb <- runPCA(pb, BSPARAM = BiocSingular::ExactParam(), ncomponents=10)
+plotPCA(pb, color_by = "tissue_id", point_size=4)
+```
+
+```{r}
+rownames(pb) <- rowData(pb)$symbol
+feats <- rownames(pb)[which(rowData(pb)$symbol %in% c("Trim63", "Foxo1", "Foxo3"))]
+plotHeatmap(pb, feats, color_columns_by = "sample_id")
+```
