@@ -1,0 +1,27 @@
+---
+title: "Feature extraction"
+format: html
+jupyter: python3
+---
+
+## GFP by spot
+
+Now that I have aligned the images, I need to extract the average GFP signal for
+each spot.
+
+This means to extract the average intensity level of GFP by shape (spot).
+
+Let's read the data.
+
+```{python}
+import spatialdata as sd
+sdata = sd.read_zarr("c26t16_final.zarr")
+sdata
+```
+
+
+```{python}
+import pandas as pd
+df1 = pd.DataFrame(sdata["C26T16"])
+df1
+```

@@ -98,9 +98,3 @@ affine
 set_transformation(c26t16["C26T16"], affine, "aligned")
 save_transformations(c26t16)
 ```
-
-Calculate features.
-
-```{python}
-
-```
