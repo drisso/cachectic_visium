@@ -1,0 +1,48 @@
+---
+title: "Spatial Data in R"
+format: html
+---
+
+## Read the Zarr file
+
+```{r}
+library(SpatialData)
+library(ggplot2)
+library(patchwork)
+library(SingleCellExperiment)
+
+spd <- readSpatialData("c26t16_align.zarr/")
+spd
+```
+
+## Plot data
+
+```{r}
+ps <- list(
+    p1 <- plotImage(spd, i=2, coord = "aligned"), 
+    p2 <- plotShape(spd, fill="grey"))
+wrap_plots(ps)
+pile(ps)
+```
+
+
+## Exctract features
+
+```{r}
+(sce <- mask(image(spd, i="C26T16_GFP"), shape(spd)))
+assay(sce)[,1:4]
+```
+
+
+## Check
+
+```{r}
+tmp = spd$tables[[1]]
+colData(tmp)$gfp <- colSums(assay(sce))
+colData(tmp)
+
+as.data.frame(colData(tmp)) |>
+    ggplot(aes(-array_row, -array_col, color = log(gfp))) +
+    geom_point() +
+    scale_color_viridis_c()
+```

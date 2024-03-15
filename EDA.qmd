@@ -17,26 +17,35 @@ sample_dirs <- c("Sample_S54407_Sham1_3_5",
                  "Sample_S54408_C26Sh_17_19_21"
                  )
 
-spe <- read10xVisium(paste0(base_dirs, sample_dirs, "/outs"),
-                     sample_id = c("Sham", "C26Ctrl", "C26T16", "C26T17"),
-                     type="sparse",
-                     images = "lowres",
-                     data="raw")
-
-spe
-colData(spe)
-table(spe$in_tissue, spe$sample_id)
+sfe <- read10xVisiumSFE(samples = paste0(base_dirs, sample_dirs), 
+                        type = "sparse",
+                        data = "raw", 
+                        images = "lowres",
+                        sample_id = c("Sham", "C26Ctrl", "C26T16", "C26T17")
+                        )
+sfe <- mirror(sfe)
+sfe
+colData(sfe)
+table(sfe$in_tissue, sfe$sample_id)
 ```
 
 First look at the samples
 
 ```{r}
 library(scater)
-library(ggspavis)
+library(Voyager)
 
-spe <- addPerCellQCMetrics(spe)
+sfe <- addPerCellQCMetrics(sfe)
 
-plotVisium(spe, fill="sum", trans="log10")
+plotSpatialFeature(sfe, "sum", 
+                   image_id = "lowres", ncol = 2,
+                   divergent=FALSE,
+                   dark=TRUE)
+
+plotSpatialFeature(sfe, "detected", 
+                   image_id = "lowres", ncol = 2,
+                   divergent=FALSE,
+                   dark=TRUE)
 ```
 
 ## Filtering and sample splitting
@@ -48,9 +57,9 @@ library(ggplot2)
 library(dplyr)
 theme_set(theme_bw())
 
-plotSpots(spe[, spe$sample_id=="C26Ctrl"])
+plotSpatialFeature(sfe[, sfe$sample_id=="C26Ctrl"], "in_tissue")
 
-as.data.frame(colData(spe)) |>
+as.data.frame(colData(sfe)) |>
     dplyr::filter(in_tissue & sample_id=="C26Ctrl") |>
     ggplot(aes(-array_row, -array_col)) +
     geom_point()
@@ -63,7 +72,7 @@ We need to split the samples, I would hope that a simple clustering of the coord
 ```{r}
 library(dbscan)
 
-C26Ctrl <- spe[, spe$in_tissue & spe$sample_id=="C26Ctrl"]
+C26Ctrl <- sfe[, sfe$in_tissue & sfe$sample_id=="C26Ctrl"]
 coords <- spatialCoords(C26Ctrl)
 
 cl <- dbscan(coords, eps = 300, minPts = 10)
@@ -83,7 +92,7 @@ plotVisium(C26Ctrl_2, fill="sum", trans="log10")
 ### Sham
 
 ```{r}
-Sham <- spe[, spe$in_tissue & spe$sample_id=="Sham"]
+Sham <- sfe[, sfe$in_tissue & sfe$sample_id=="Sham"]
 coords <- spatialCoords(Sham)
 
 cl <- dbscan(coords, eps = 300, minPts = 10)
@@ -105,7 +114,7 @@ plotVisium(Sham_3, fill="sum", trans="log10")
 ### C26T16
 
 ```{r}
-C26T16 <- spe[, spe$in_tissue & spe$sample_id=="C26T16"]
+C26T16 <- sfe[, sfe$in_tissue & sfe$sample_id=="C26T16"]
 coords <- spatialCoords(C26T16)
 
 cl <- dbscan(coords, eps = 300, minPts = 10)
@@ -127,7 +136,7 @@ plotVisium(C26T16_3, fill="sum", trans="log10")
 ### C26T17
 
 ```{r}
-C26T17 <- spe[, spe$in_tissue & spe$sample_id=="C26T17"]
+C26T17 <- sfe[, sfe$in_tissue & sfe$sample_id=="C26T17"]
 coords <- spatialCoords(C26T17)
 
 cl <- dbscan(coords, eps = 300, minPts = 10)
@@ -149,32 +158,32 @@ plotVisium(C26T17_3, fill="sum", trans="log10")
 ### Add tissue ID to full object
 
 ```{r}
-spe$tissue_id <- rep(NA_character_, ncol(spe))
+sfe$tissue_id <- rep(NA_character_, ncol(sfe))
 
-colData(spe)[spe$sample_id=="Sham",][colnames(Sham_1),"tissue_id"] <- "Sham_1"
-colData(spe)[spe$sample_id=="Sham",][colnames(Sham_2),"tissue_id"] <- "Sham_2"
-colData(spe)[spe$sample_id=="Sham",][colnames(Sham_3),"tissue_id"] <- "Sham_3"
+colData(sfe)[sfe$sample_id=="Sham",][colnames(Sham_1),"tissue_id"] <- "Sham_1"
+colData(sfe)[sfe$sample_id=="Sham",][colnames(Sham_2),"tissue_id"] <- "Sham_2"
+colData(sfe)[sfe$sample_id=="Sham",][colnames(Sham_3),"tissue_id"] <- "Sham_3"
 
-colData(spe)[spe$sample_id=="C26T16",][colnames(C26T16_1),"tissue_id"] <- "C26T16_1"
-colData(spe)[spe$sample_id=="C26T16",][colnames(C26T16_2),"tissue_id"] <- "C26T16_2"
-colData(spe)[spe$sample_id=="C26T16",][colnames(C26T16_3),"tissue_id"] <- "C26T16_3"
+colData(sfe)[sfe$sample_id=="C26T16",][colnames(C26T16_1),"tissue_id"] <- "C26T16_1"
+colData(sfe)[sfe$sample_id=="C26T16",][colnames(C26T16_2),"tissue_id"] <- "C26T16_2"
+colData(sfe)[sfe$sample_id=="C26T16",][colnames(C26T16_3),"tissue_id"] <- "C26T16_3"
 
-colData(spe)[spe$sample_id=="C26T17",][colnames(C26T17_1),"tissue_id"] <- "C26T17_1"
-colData(spe)[spe$sample_id=="C26T17",][colnames(C26T17_2),"tissue_id"] <- "C26T17_2"
-colData(spe)[spe$sample_id=="C26T17",][colnames(C26T17_3),"tissue_id"] <- "C26T17_3"
+colData(sfe)[sfe$sample_id=="C26T17",][colnames(C26T17_1),"tissue_id"] <- "C26T17_1"
+colData(sfe)[sfe$sample_id=="C26T17",][colnames(C26T17_2),"tissue_id"] <- "C26T17_2"
+colData(sfe)[sfe$sample_id=="C26T17",][colnames(C26T17_3),"tissue_id"] <- "C26T17_3"
 
-colData(spe)[spe$sample_id=="C26Ctrl",][colnames(C26Ctrl_1),"tissue_id"] <- "C26Ctrl_1"
-colData(spe)[spe$sample_id=="C26Ctrl",][colnames(C26Ctrl_2),"tissue_id"] <- "C26Ctrl_2"
+colData(sfe)[sfe$sample_id=="C26Ctrl",][colnames(C26Ctrl_1),"tissue_id"] <- "C26Ctrl_1"
+colData(sfe)[sfe$sample_id=="C26Ctrl",][colnames(C26Ctrl_2),"tissue_id"] <- "C26Ctrl_2"
 
-spe$tissue_id <- as.factor(spe$tissue_id)
+sfe$tissue_id <- as.factor(sfe$tissue_id)
 
-plotVisium(spe, fill="tissue_id") +
+plotVisium(sfe, fill="tissue_id") +
     scale_fill_brewer(type = "qual", palette = "Set3")
 
-plotSpots(spe, annotate="tissue_id") +
+plotSpots(sfe, annotate="tissue_id") +
     scale_color_brewer(type = "qual", palette = "Set3")
 
-saveRDS(spe, file="spe_annotated.rds")
+saveRDS(sfe, file="sfe_annotated.rds")
 ```
 
 ## Exploratory Data Analysis
@@ -183,23 +192,23 @@ Plot total counts and three interesting genes.
 
 ```{r}
 library(scater)
-spe <- logNormCounts(spe)
+sfe <- logNormCounts(sfe)
 
-colData(spe)$Trim63 <- logcounts(spe)[rowData(spe)$symbol == "Trim63",]
-colData(spe)$Foxo1 <- logcounts(spe)[rowData(spe)$symbol == "Foxo1",]
-colData(spe)$Foxo3 <- logcounts(spe)[rowData(spe)$symbol == "Foxo3",]
+colData(sfe)$Trim63 <- logcounts(sfe)[rowData(sfe)$symbol == "Trim63",]
+colData(sfe)$Foxo1 <- logcounts(sfe)[rowData(sfe)$symbol == "Foxo1",]
+colData(sfe)$Foxo3 <- logcounts(sfe)[rowData(sfe)$symbol == "Foxo3",]
 
-plotVisium(spe[,!is.na(spe$tissue_id)], fill="sum", trans="log10")
-plotSpots(spe[,!is.na(spe$tissue_id)], annotate="sum")
+plotVisium(sfe[,!is.na(sfe$tissue_id)], fill="sum", trans="log10")
+plotSpots(sfe[,!is.na(sfe$tissue_id)], annotate="sum")
 
-plotVisium(spe[,!is.na(spe$tissue_id)], fill="Trim63")
-plotSpots(spe[,!is.na(spe$tissue_id)], annotate="Trim63")
+plotVisium(sfe[,!is.na(sfe$tissue_id)], fill="Trim63")
+plotSpots(sfe[,!is.na(sfe$tissue_id)], annotate="Trim63")
 
-plotVisium(spe[,!is.na(spe$tissue_id)], fill="Foxo1")
-plotSpots(spe[,!is.na(spe$tissue_id)], annotate="Foxo1")
+plotVisium(sfe[,!is.na(sfe$tissue_id)], fill="Foxo1")
+plotSpots(sfe[,!is.na(sfe$tissue_id)], annotate="Foxo1")
 
-plotVisium(spe[,!is.na(spe$tissue_id)], fill="Foxo3")
-plotSpots(spe[,!is.na(spe$tissue_id)], annotate="Foxo3")
+plotVisium(sfe[,!is.na(sfe$tissue_id)], fill="Foxo3")
+plotSpots(sfe[,!is.na(sfe$tissue_id)], annotate="Foxo3")
 ```
 
 ### PCA of pseudobulk
@@ -207,7 +216,7 @@ plotSpots(spe[,!is.na(spe$tissue_id)], annotate="Foxo3")
 ```{r}
 # create pseudobulk
 library(scuttle)
-pb <- aggregateAcrossCells(spe, ids=spe$tissue_id)
+pb <- aggregateAcrossCells(sfe, ids=sfe$tissue_id)
 pb <- computeLibraryFactors(pb)
 pb <- logNormCounts(pb)
 pb <- runPCA(pb, BSPARAM = BiocSingular::ExactParam(), ncomponents=10)

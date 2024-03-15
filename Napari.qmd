@@ -29,6 +29,7 @@ Let's add the images.
 from dask_image.imread import imread
 from xarray import DataArray
 from spatialdata.models import Image2DModel
+from spatialdata.models import PointsModel
 from spatialdata.transformations.transformations import Identity
 
 image = imread("data/IF_WGA_dapi_GFP/Slide161820_GFP.ome.tif").squeeze().transpose(2, 0, 1)
@@ -69,12 +70,6 @@ c26t16.add_points("IF landmarks", PointsModel.parse(sdata.points["IF landmarks"]
 c26t16.add_points("Visium landmarks", PointsModel.parse(sdata.points["Visium landmarks"]))
 ```
 
-Let's save the object in zarr.
-
-```{python}
-c26t16.write("c26t16_final.zarr")
-```
-
 Now we can transform the images.
 
 ```{python}
@@ -96,5 +91,15 @@ affine = align_elements_using_landmarks(
 affine
 
 set_transformation(c26t16["C26T16"], affine, "aligned")
-save_transformations(c26t16)
+# save_transformations(c26t16)
+```
+
+```{python}
+c26t16 = c26t16.transform_to_coordinate_system("aligned")
+```
+
+Let's save the object in zarr.
+
+```{python}
+c26t16.write("c26t16_align.zarr")
 ```
