@@ -63,6 +63,7 @@ In this interactive chunk, I add the landmarks.
 #| eval: false
 Interactive(c26t16)
 ```
+
 ```{python}
 sdata = sd.read_zarr("c26t16.zarr/")
 sdata.points

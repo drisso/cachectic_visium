@@ -15,11 +15,11 @@ Let's read the data.
 
 ```{python}
 import spatialdata as sd
-sdata = sd.read_zarr("c26t16_aligned.zarr")
-transformed_sdata = sdata.transform_to_coordinate_system("aligned")
-transformed_sdata
+from napari_spatialdata import Interactive
 
-sd.aggregate(values=transformed_sdata["C26T16_GFP"], by = transformed_sdata["C26T16"], agg_func="mean", target_coordinate_system="aligned")
+sdata = sd.read_zarr("c26t16_final.zarr")
+
+Interactive(sdata)
 ```
 
 
